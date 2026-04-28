@@ -90,3 +90,57 @@ parsed.writeStream \
     .outputMode("append") \
     .start() \
     .awaitTermination()
+
+price_schema = StructType([
+    StructField("market_id", StringType()),
+    StructField("market_title", StringType()),
+    StructField("yes_bid", FloatType()),
+    StructField("yes_ask", FloatType()),
+    StructField("volume", LongType()),
+    StructField("timestamp", FloatType())
+])
+
+def write_prices_to_snowflake(batch_df, batch_id):
+    rows = batch_df.collect()
+    if not rows:
+        return
+    conn = snowflake.connector.connect(
+        user=os.getenv('SNOWFLAKE_USER'),
+        password=os.getenv('SNOWFLAKE_PASSWORD'),
+        account=os.getenv('SNOWFLAKE_ACCOUNT'),
+        database=os.getenv('SNOWFLAKE_DATABASE'),
+        schema=os.getenv('SNOWFLAKE_SCHEMA'),
+        warehouse=os.getenv('SNOWFLAKE_WAREHOUSE')
+    )
+    cursor = conn.cursor()
+    for row in rows:
+        cursor.execute("""
+            INSERT INTO kalshi_sentiment.raw.kalshi_prices
+            (market_id, market_title, yes_bid, yes_ask, volume, timestamp)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            row.market_id, row.market_title,
+            row.yes_bid, row.yes_ask,
+            row.volume, row.timestamp
+        ))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print(f"Price batch {batch_id}: wrote {len(rows)} rows")
+
+price_df = spark \
+    .readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("subscribe", "kalshi-prices") \
+    .option("startingOffsets", "earliest") \
+    .load()
+
+parsed_prices = price_df.select(
+    from_json(col("value").cast("string"), price_schema).alias("data")
+).select("data.*")
+
+price_query = parsed_prices.writeStream \
+    .foreachBatch(write_prices_to_snowflake) \
+    .outputMode("append") \
+    .start()
