@@ -11,12 +11,16 @@ producer = KafkaProducer(
 MARKET_SUBREDDIT_MAP = {
     'FED-RATE-JUN': {
         'subreddits': ['investing', 'economics', 'wallstreetbets'],
-        'keywords': ['federal reserve', 'rate cut', 'fomc', 'powell']
+        'keywords': ['federal reserve', 'rate cut', 'fomc', 'fed rate', 'interest rate decision', 'powell fed']
     }
 }
 
 headers = {'User-Agent': 'kalshi-sentiment-bot/1.0'}
 seen_ids = set()
+
+def is_relevant(text, keywords):
+    text_lower = text.lower()
+    return any(f' {kw} ' in f' {text_lower} ' for kw in keywords)
 
 def fetch_posts(subreddit, keyword):
     response = requests.get(
@@ -41,6 +45,9 @@ def poll_and_publish():
                     data = post['data']
                     post_id = data.get('id')
                     if post_id in seen_ids:
+                        continue
+                    text = data.get('title', '') + ' ' + data.get('selftext', '')
+                    if not is_relevant(text, config['keywords']):
                         continue
                     seen_ids.add(post_id)
                     message = {

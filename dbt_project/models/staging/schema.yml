@@ -1,0 +1,11 @@
+models:
+  dbt_project:
+    staging:
+      +materialized: view
+      +schema: marts
+    intermediate:
+      +materialized: view
+      +schema: marts
+    marts:
+      +materialized: table
+      +schema: marts
