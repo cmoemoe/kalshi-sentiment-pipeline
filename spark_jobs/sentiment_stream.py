@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json
-from pyspark.sql.types import StructType, StructField, StringType, FloatType, LongType
+from pyspark.sql.types import StructType, StructField, StringType, FloatType, LongType, DoubleType
 from textblob import TextBlob
 import snowflake.connector
 import os
@@ -88,21 +88,26 @@ parsed = df.select(
 parsed.writeStream \
     .foreachBatch(write_to_snowflake) \
     .outputMode("append") \
-    .start() \
-    .awaitTermination()
+    .start()
+ 
+spark.streams.awaitAnyTermination()
 
 price_schema = StructType([
     StructField("market_id", StringType()),
     StructField("market_title", StringType()),
     StructField("yes_bid", FloatType()),
     StructField("yes_ask", FloatType()),
-    StructField("volume", LongType()),
-    StructField("timestamp", FloatType())
+    StructField("volume", DoubleType()),
+    StructField("timestamp", DoubleType())
 ])
 
 def write_prices_to_snowflake(batch_df, batch_id):
+    print(f"Price batch {batch_id}: received {batch_df.count()} rows")
+    if batch_df.count() > 0:
+        batch_df.show(5, truncate=False)
     rows = batch_df.collect()
     if not rows:
+        print(f"Price batch {batch_id}: no rows after collect")
         return
     conn = snowflake.connector.connect(
         user=os.getenv('SNOWFLAKE_USER'),
@@ -126,7 +131,7 @@ def write_prices_to_snowflake(batch_df, batch_id):
     conn.commit()
     cursor.close()
     conn.close()
-    print(f"Price batch {batch_id}: wrote {len(rows)} rows")
+    print(f"Price batch {batch_id}: wrote {len(rows)} rows to Snowflake")
 
 price_df = spark \
     .readStream \

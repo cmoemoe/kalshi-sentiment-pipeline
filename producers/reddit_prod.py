@@ -9,9 +9,18 @@ producer = KafkaProducer(
 )
 
 MARKET_SUBREDDIT_MAP = {
-    'FED-RATE-JUN': {
-        'subreddits': ['investing', 'economics', 'wallstreetbets'],
-        'keywords': ['federal reserve', 'rate cut', 'fomc', 'fed rate', 'interest rate decision', 'powell fed']
+    'KXRATECUTCOUNT-26DEC31': {
+        'subreddits': ['investing', 'economics', 'wallstreetbets', 'stocks'],
+        'keywords': [
+            'rate cuts 2026',
+            'federal reserve cuts',
+            'fomc cuts',
+            'how many rate cuts',
+            'number of rate cuts',
+            'fed cuts this year',
+            'interest rate outlook',
+            'rate cut expectations'
+        ]
     }
 }
 
@@ -23,18 +32,23 @@ def is_relevant(text, keywords):
     return any(f' {kw} ' in f' {text_lower} ' for kw in keywords)
 
 def fetch_posts(subreddit, keyword):
-    response = requests.get(
-        f'https://www.reddit.com/r/{subreddit}/search.json',
-        headers=headers,
-        params={
-            'q': keyword,
-            'sort': 'new',
-            'limit': 50
-        }
-    )
-    if response.status_code == 200:
-        return response.json()['data']['children']
-    return []
+    try:
+        response = requests.get(
+            f'https://www.reddit.com/r/{subreddit}/search.json',
+            headers=headers,
+            params={
+                'q': keyword,
+                'sort': 'new',
+                'limit': 50
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            return response.json()['data']['children']
+        return []
+    except Exception as e:
+        print(f"Request error for {subreddit}/{keyword}: {e}")
+        return []
 
 def poll_and_publish():
     for market_id, config in MARKET_SUBREDDIT_MAP.items():
