@@ -12,6 +12,8 @@ MARKET_SUBREDDIT_MAP = {
     'KXRATECUTCOUNT-26DEC31': {
         'subreddits': ['investing', 'economics', 'wallstreetbets', 'stocks'],
         'keywords': [
+            'rate cut',
+            'rate cuts',
             'rate cuts 2026',
             'federal reserve cuts',
             'fomc cuts',
