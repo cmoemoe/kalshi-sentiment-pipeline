@@ -30,5 +30,3 @@ python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptr
 
 Running the Pipeline 
 Run the reddit producer, kalshi producer, and sentiment stream each simultaneously in a different terminal. Batch confirmations print in sentiment stream output as data flows through. Then run the dbt build, export/refresh mart tables as CSVs to connect to Tableau Public, and the dashboards are ready to be assembled. 
-
-![Basic Sentiment Trend Dashboard](media/basic_sentiment_trend.png)
